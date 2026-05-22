@@ -1,0 +1,647 @@
+---
+title: "Análisis y exploración del desempeño de los estudiantes en el SaberPro"
+format: 
+    dashboard:
+        css: styles.css
+        theme: flatly
+        logo: logo.png
+        nav-buttons:
+            href: "#"
+---
+
+```{python}
+#| echo: False
+import pandas as pd
+import numpy as np
+import matplotlib
+import matplotlib.pyplot as plt
+import matplotlib.ticker as ticker
+import seaborn as sns
+from funciones_SaberPro import *
+
+# ── Estilo global de gráficos ──────────────────────────────────
+plt.rcParams.update({
+    "figure.figsize": (6,4),
+    "axes.grid": True
+})
+
+PALETA = ["#2563EB", "#16A34A", "#DC2626", "#D97706", "#7C3AED",
+          "#0891B2", "#DB2777", "#65A30D"]
+```
+
+# Presentación
+
+## Row
+
+### 
+
+::: {style="display:flex; justify-content:center; align-items:center; min-height:72vh; font-family:system-ui,sans-serif;"}
+
+::: {style="text-align:center; border:1px solid #E2E8F0; padding:48px 56px; border-radius:16px; box-shadow:0 8px 24px rgba(0,0,0,0.07); max-width:720px; background:#fff;"}
+
+
+<h1 style="font-size:2rem; font-weight:800; color:#1E293B; margin-bottom:12px; line-height:1.2;">
+Análisis y Exploración del Desempeño<br>de los Estudiantes en el SaberPro
+</h1>
+
+<div style="width:56px; height:4px; background:linear-gradient(90deg,#2563EB,#7C3AED); margin:0 auto 28px auto; border-radius:2px;"></div>
+
+<p style="color:#64748B; font-size:0.95rem; margin-bottom:28px;">
+Microdatos Saber 11 · Región Caribe · Periodo 2023
+</p>
+
+<div style="background:#F8FAFC; border-radius:10px; padding:20px 24px; text-align:left; display:inline-block; min-width:360px;">
+<p style="font-size:0.7rem; font-weight:700; color:#94A3B8; text-transform:uppercase; letter-spacing:1px; margin-bottom:14px;">Autores</p>
+<p style="font-size:0.95rem; color:#334155; margin:6px 0;">Santiago José Cuesta Maza · <strong>T00082473</strong></p>
+<p style="font-size:0.95rem; color:#334155; margin:6px 0;">Valeria Estefanía Berrio Payares · <strong>T00082178</strong></p>
+<p style="font-size:0.95rem; color:#334155; margin:6px 0;">Luis Eduardo Mendoza Angulo · <strong>T00082297</strong></p>
+<p style="font-size:0.95rem; color:#334155; margin:6px 0;">Deiner de Jesús Gonzalez Paredes · <strong>T00082648</strong></p>
+<p style="font-size:0.95rem; color:#334155; margin:6px 0;">Danna Valentina Zuluaga Hernández · <strong>T00082548</strong></p>
+</div>
+
+:::
+
+:::
+
+# Lectura de datos
+
+## Row
+
+### Dataset cargado {height="100%"}
+
+```{python}
+df = pd.read_csv("DataCaribe.csv")
+df
+```
+
+# Limpieza de datos
+
+## Row
+
+### Transformaciones aplicadas {height="100%"}
+
+```{python}
+#| echo: false
+
+# 1. Fechas
+if df['ESTU_FECHANACIMIENTO'].dtype == 'object':
+    df['ESTU_FECHANACIMIENTO'] = pd.to_datetime(
+        df['ESTU_FECHANACIMIENTO'], format='%d/%m/%Y', errors='coerce')
+
+# 2. Extracción numérica
+for col in ['FAMI_ESTRATOVIVIENDA', 'ESTU_SEMESTRECURSA']:
+    if df[col].dtype == 'object':
+        df[col] = df[col].str.extract(r'(\d+)').astype(float)
+
+# 3. Imputación
+for col in df.select_dtypes(include=[np.number]).columns:
+    df[col] = df[col].fillna(df[col].median())
+for col in df.select_dtypes(include=['object']).columns:
+    if not df[col].mode().empty:
+        df[col] = df[col].fillna(df[col].mode()[0])
+
+# 4. Booleanos
+for col in ['ESTU_PAGOMATRICULACREDITO','ESTU_PAGOMATRICULAPROPIO',
+            'ESTU_PAGOMATRICULABECA','ESTU_PAGOMATRICULAPADRES',
+            'FAMI_TIENECOMPUTADOR','FAMI_TIENEAUTOMOVIL',
+            'FAMI_TIENECONSOLAVIDEOJUEGOS','FAMI_TIENEINTERNET',
+            'FAMI_TIENESERVICIOTV','FAMI_TIENEMOTOCICLETA']:
+    if col in df.columns:
+        df[col] = df[col].replace({'Si': True, 'No': False})
+
+# 5. Categorías
+for col in ['ESTU_NACIONALIDAD','ESTU_PAIS_RESIDE','ESTU_AREARESIDE',
+            'ESTU_GENERO','ESTU_DEPTO_RESIDE','ESTU_MCPIO_RESIDE',
+            'ESTU_PRGM_ACADEMICO','ESTU_NIVEL_PRGM_ACADEMICO',
+            'ESTU_METODO_PRGM','INST_CARACTER_ACADEMICO',
+            'INST_ORIGEN','MOD_INGLES_DESEM']:
+    if col in df.columns and df[col].dtype == 'object':
+        df[col] = df[col].astype('category')
+
+df
+```
+
+# Materiales y métodos
+
+## Row
+
+### 
+
+::: {style="overflow-y:auto; padding:28px; background:#F8FAFC; height:100%;"}
+
+::: {style="display:grid; grid-template-columns:repeat(auto-fit,minmax(380px,1fr)); gap:24px; margin-bottom:24px;"}
+
+::: {style="background:#fff; padding:24px; border-radius:12px; border:1px solid #E2E8F0; box-shadow:0 2px 8px rgba(0,0,0,0.04); border-top:4px solid #2563EB;"}
+#### 📂 Origen de la información
+
+El análisis se fundamenta en los **microdatos de las pruebas de Estado**, registros a nivel de individuo proporcionados por el **SaberPro** a través de su **Portal Data SaberPro**.
+
+**Población objetivo** — Cohorte de estudiantes de la **región Caribe**, periodo **2023**. Permite un análisis localizado y actual de brechas educativas.
+:::
+
+::: {style="background:#fff; padding:24px; border-radius:12px; border:1px solid #E2E8F0; box-shadow:0 2px 8px rgba(0,0,0,0.04); border-top:4px solid #16A34A;"}
+#### 🛠 Ingeniería de datos con Python
+
+- **Tipificación** — Conversión de `object` a tipos numéricos y fecha.
+- **Optimización de memoria** — Variables categóricas con tipo `category`.
+- **Imputación** — Mediana para puntajes, moda para variables nominales.
+- **Booleanos** — Variables Sí/No convertidas a `True`/`False`.
+:::
+
+:::
+
+::: {style="background:#fff; padding:24px; border-radius:12px; border:1px solid #E2E8F0; box-shadow:0 2px 8px rgba(0,0,0,0.04); border-top:4px solid #7C3AED;"}
+#### 📋 Ficha Técnica de Variables
+
+| Variable | Tipo | n | Descripción |
+|:---|:---:|:---:|:---|
+| **PUNT_GLOBAL** | Continuo | 131,184 | Puntaje total del estudiante (0–500) |
+| **MOD_INGLES_PUNT** | Continuo | 131,184 | Puntaje módulo bilingüismo |
+| **MOD_LECTURA_CRITICA_PUNT** | Continuo | 131,184 | Puntaje lectura crítica |
+| **MOD_RAZONA_CUANTITAT_PUNT** | Continuo | 131,184 | Puntaje razonamiento cuantitativo |
+| **MOD_COMPETEN_CIUDADA_PUNT** | Continuo | 131,184 | Puntaje competencias ciudadanas |
+| **ESTU_GENERO** | Nominal | 131,184 | Género del examinado |
+| **FAMI_TIENEINTERNET** | Nominal | 131,184 | Acceso a internet en el hogar |
+| **FAMI_TIENECOMPUTADOR** | Nominal | 131,184 | Computador en el hogar |
+| **ESTU_AREARESIDE** | Nominal | 131,184 | Área de residencia |
+| **ESTU_DEPTO_RESIDE** | Nominal | 131,184 | Departamento de residencia |
+
+:::
+
+:::
+
+# 5.1 Diagnóstico NAs
+
+## Row
+
+### Función manual — diagnóstico {height="100%"}
+
+::: {style="background:#fff; border-radius:12px; border:1px solid #E2E8F0; padding:20px; box-shadow:0 2px 8px rgba(0,0,0,0.04);"}
+
+> **Dataset:** `df` (cargado, sin limpiar) · Función manual sin `isnull()`, `duplicated()` ni `sum()` de pandas.
+
+```{python}
+tabla_na_manual, dup_manual, n_manual = diagnostico_manual(df)
+
+print(f"Total filas (manual) : {n_manual:,}")
+print(f"Duplicados  (manual) : {dup_manual:,}\n")
+print("Top 10 variables con más NAs:")
+print(tabla_na_manual.head(10).to_string(index=False))
+```
+
+:::
+
+### Validación nativa {height="100%"}
+
+::: {style="background:#fff; border-radius:12px; border:1px solid #E2E8F0; padding:20px; box-shadow:0 2px 8px rgba(0,0,0,0.04);"}
+
+```{python}
+n_nativo   = len(df)
+dup_nativo = df.duplicated().sum()
+
+na_nativa = (df.isnull().sum()
+    .reset_index()
+    .rename(columns={"index":"Variable", 0:"NAs (nativa)"}))
+na_nativa["% NA (nativa)"] = round(na_nativa["NAs (nativa)"] / n_nativo * 100, 4)
+na_nativa = na_nativa.sort_values("% NA (nativa)", ascending=False).reset_index(drop=True)
+
+print(f"Total filas (nativa) : {n_nativo:,}")
+print(f"Duplicados  (nativa) : {dup_nativo:,}\n")
+print("Top 10 variables con más NAs:")
+print(na_nativa.head(10).to_string(index=False))
+```
+
+```{python}
+comp = tabla_na_manual.merge(na_nativa, on="Variable", how="left")
+comp["Coincide"] = comp["NAs (manual)"] == comp["NAs (nativa)"]
+errores = comp[comp["Coincide"] == False]
+if errores.empty:
+    print("Todos los conteos de NA coinciden entre función manual y nativa.")
+else:
+    print("Hay diferencias:")
+    print(errores.to_string(index=False))
+```
+
+:::
+
+### Gráfico Top 10 NAs {height="100%"}
+
+::: {style="background:#fff; border-radius:12px; border:1px solid #E2E8F0; padding:20px; box-shadow:0 2px 8px rgba(0,0,0,0.04);"}
+
+```{python}
+top10 = tabla_na_manual.head(10)
+fig, ax = plt.subplots(figsize=(7, 4))
+colors = [PALETA[0] if x > 10 else PALETA[1] for x in top10["% NA (manual)"][::-1]]
+bars = ax.barh(top10["Variable"][::-1], top10["% NA (manual)"][::-1],
+               color=colors, edgecolor="white", linewidth=0.5)
+ax.bar_label(bars, fmt="%.2f%%", padding=4, fontsize=8, color="#374151")
+ax.set_xlabel("% de valores nulos")
+ax.set_title("Top 10 variables con mayor % de NAs", fontweight="bold", pad=10)
+ax.set_xlim(0, top10["% NA (manual)"].max() * 1.18)
+plt.tight_layout()
+plt.show()
+```
+
+:::
+
+
+
+# 5.2 Vars. Cualitativas
+
+```{python}
+#| echo: false
+PALETA = ["#2563EB", "#16A34A", "#DC2626", "#D97706", "#7C3AED"]
+
+VARS_CUAL = [
+    ("ESTU_GENERO",         PALETA[0]),
+    ("FAMI_TIENEINTERNET",  PALETA[1]),
+    ("FAMI_TIENECOMPUTADOR",PALETA[2]),
+    ("ESTU_AREARESIDE",     PALETA[3]),
+    ("ESTU_DEPTO_RESIDE",   PALETA[4]),
+]
+```
+
+## Row {.tabset}
+
+### ESTU_GENERO
+
+::: {style="background:#fff; border-radius:12px; border:1px solid #E2E8F0; padding:20px; box-shadow:0 2px 8px rgba(0,0,0,0.04);"}
+
+```{python}
+var, color = "ESTU_GENERO", PALETA[0]
+tabla, moda = frecuencia_cualitativa_manual(df[var])
+print(tabla.to_string(index=False))
+print(f"\n  Moda: {moda}")
+validar_cualitativa(df[var], tabla, moda)
+graficar_cualitativa(tabla, var, color)
+```
+
+:::
+
+### FAMI_TIENEINTERNET
+
+::: {style="background:#fff; border-radius:12px; border:1px solid #E2E8F0; padding:20px; box-shadow:0 2px 8px rgba(0,0,0,0.04);"}
+
+```{python}
+var, color = "FAMI_TIENEINTERNET", PALETA[1]
+tabla, moda = frecuencia_cualitativa_manual(df[var])
+print(tabla.to_string(index=False))
+print(f"\n  Moda: {moda}")
+validar_cualitativa(df[var], tabla, moda)
+graficar_cualitativa(tabla, var, color)
+```
+
+:::
+
+### FAMI_TIENECOMPUTADOR
+
+::: {style="background:#fff; border-radius:12px; border:1px solid #E2E8F0; padding:20px; box-shadow:0 2px 8px rgba(0,0,0,0.04);"}
+
+```{python}
+var, color = "FAMI_TIENECOMPUTADOR", PALETA[2]
+tabla, moda = frecuencia_cualitativa_manual(df[var])
+print(tabla.to_string(index=False))
+print(f"\n  Moda: {moda}")
+validar_cualitativa(df[var], tabla, moda)
+graficar_cualitativa(tabla, var, color)
+```
+
+:::
+
+### ESTU_AREARESIDE
+
+::: {style="background:#fff; border-radius:12px; border:1px solid #E2E8F0; padding:20px; box-shadow:0 2px 8px rgba(0,0,0,0.04);"}
+
+```{python}
+var, color = "ESTU_AREARESIDE", PALETA[3]
+tabla, moda = frecuencia_cualitativa_manual(df[var])
+print(tabla.to_string(index=False))
+print(f"\n  Moda: {moda}")
+validar_cualitativa(df[var], tabla, moda)
+graficar_cualitativa(tabla, var, color)
+```
+
+:::
+
+### ESTU_DEPTO_RESIDE
+
+::: {style="background:#fff; border-radius:12px; border:1px solid #E2E8F0; padding:20px; box-shadow:0 2px 8px rgba(0,0,0,0.04);"}
+
+```{python}
+var, color = "ESTU_DEPTO_RESIDE", PALETA[4]
+tabla, moda = frecuencia_cualitativa_manual(df[var])
+print(tabla.to_string(index=False))
+print(f"\n  Moda: {moda}")
+validar_cualitativa(df[var], tabla, moda)
+graficar_cualitativa(tabla, var, color)
+```
+
+:::
+
+# 5.3 Vars. Cuantitativas
+
+```{python}
+#| echo: false
+VARS_CUANT = [
+    ("PUNT_GLOBAL",              PALETA[0]),
+    ("MOD_INGLES_PUNT",          PALETA[1]),
+    ("MOD_LECTURA_CRITICA_PUNT", PALETA[2]),
+    ("MOD_RAZONA_CUANTITAT_PUNT",PALETA[3]),
+    ("MOD_COMPETEN_CIUDADA_PUNT",PALETA[4]),
+]
+```
+
+## Row {.tabset}
+
+### PUNT_GLOBAL
+
+::: {style="background:#fff; border-radius:12px; border:1px solid #E2E8F0; padding:20px; box-shadow:0 2px 8px rgba(0,0,0,0.04);"}
+
+
+```{python}
+var, color = "PUNT_GLOBAL", PALETA[0]
+res = estadisticas_cuantitativas_manual(df[var])
+for k, v in res.items(): print(f"  {k:<12}: {v}")
+print()
+validar_cuantitativa(df[var], res)
+graficar_cuantitativa(df[var], var, res, color)
+```
+
+:::
+
+### MOD_INGLES_PUNT
+
+::: {style="background:#fff; border-radius:12px; border:1px solid #E2E8F0; padding:20px; box-shadow:0 2px 8px rgba(0,0,0,0.04);"}
+
+```{python}
+var, color = "MOD_INGLES_PUNT", PALETA[1]
+res = estadisticas_cuantitativas_manual(df[var])
+for k, v in res.items(): print(f"  {k:<12}: {v}")
+print()
+validar_cuantitativa(df[var], res)
+graficar_cuantitativa(df[var], var, res, color)
+```
+
+:::
+
+### MOD_LECTURA_CRITICA_PUNT
+
+::: {style="background:#fff; border-radius:12px; border:1px solid #E2E8F0; padding:20px; box-shadow:0 2px 8px rgba(0,0,0,0.04);"}
+
+```{python}
+var, color = "MOD_LECTURA_CRITICA_PUNT", PALETA[2]
+res = estadisticas_cuantitativas_manual(df[var])
+for k, v in res.items(): print(f"  {k:<12}: {v}")
+print()
+validar_cuantitativa(df[var], res)
+graficar_cuantitativa(df[var], var, res, color)
+```
+
+:::
+
+### MOD_RAZONA_CUANTITAT_PUNT
+
+::: {style="background:#fff; border-radius:12px; border:1px solid #E2E8F0; padding:20px; box-shadow:0 2px 8px rgba(0,0,0,0.04);"}
+
+```{python}
+var, color = "MOD_RAZONA_CUANTITAT_PUNT", PALETA[3]
+res = estadisticas_cuantitativas_manual(df[var])
+for k, v in res.items(): print(f"  {k:<12}: {v}")
+print()
+validar_cuantitativa(df[var], res)
+graficar_cuantitativa(df[var], var, res, color)
+```
+
+:::
+
+### MOD_COMPETEN_CIUDADA_PUNT
+
+::: {style="background:#fff; border-radius:12px; border:1px solid #E2E8F0; padding:20px; box-shadow:0 2px 8px rgba(0,0,0,0.04);"}
+
+```{python}
+var, color = "MOD_COMPETEN_CIUDADA_PUNT", PALETA[4]
+res = estadisticas_cuantitativas_manual(df[var])
+for k, v in res.items(): print(f"  {k:<12}: {v}")
+print()
+validar_cuantitativa(df[var], res)
+graficar_cuantitativa(df[var], var, res, color)
+```
+
+:::
+
+# 5.4 Medidas de Localización
+
+```{python}
+#| echo: false
+# Las funciones medidas_localizacion_manual, validar_localizacion
+# y graficar_localizacion se importan desde funciones_SaberPro.py
+```
+
+## Row {.tabset}
+
+### PUNT_GLOBAL
+
+::: {style="background:#fff; border-radius:12px; border:1px solid #E2E8F0; padding:20px; box-shadow:0 2px 8px rgba(0,0,0,0.04);"}
+
+
+```{python}
+var, color = "PUNT_GLOBAL", PALETA[0]
+res = medidas_localizacion_manual(df[var])
+for k, v in res.items(): print(f"  {k:<8}: {v}")
+print()
+validar_localizacion(df[var], res)
+graficar_localizacion(df[var], var, res, color)
+```
+
+:::
+
+### MOD_INGLES_PUNT
+
+::: {style="background:#fff; border-radius:12px; border:1px solid #E2E8F0; padding:20px; box-shadow:0 2px 8px rgba(0,0,0,0.04);"}
+
+```{python}
+var, color = "MOD_INGLES_PUNT", PALETA[1]
+res = medidas_localizacion_manual(df[var])
+for k, v in res.items(): print(f"  {k:<8}: {v}")
+print()
+validar_localizacion(df[var], res)
+graficar_localizacion(df[var], var, res, color)
+```
+
+:::
+
+### MOD_LECTURA_CRITICA_PUNT
+
+::: {style="background:#fff; border-radius:12px; border:1px solid #E2E8F0; padding:20px; box-shadow:0 2px 8px rgba(0,0,0,0.04);"}
+
+```{python}
+var, color = "MOD_LECTURA_CRITICA_PUNT", PALETA[2]
+res = medidas_localizacion_manual(df[var])
+for k, v in res.items(): print(f"  {k:<8}: {v}")
+print()
+validar_localizacion(df[var], res)
+graficar_localizacion(df[var], var, res, color)
+```
+
+:::
+
+### MOD_RAZONA_CUANTITAT_PUNT
+
+::: {style="background:#fff; border-radius:12px; border:1px solid #E2E8F0; padding:20px; box-shadow:0 2px 8px rgba(0,0,0,0.04);"}
+
+```{python}
+var, color = "MOD_RAZONA_CUANTITAT_PUNT", PALETA[3]
+res = medidas_localizacion_manual(df[var])
+for k, v in res.items(): print(f"  {k:<8}: {v}")
+print()
+validar_localizacion(df[var], res)
+graficar_localizacion(df[var], var, res, color)
+```
+
+:::
+
+### MOD_COMPETEN_CIUDADA_PUNT
+
+::: {style="background:#fff; border-radius:12px; border:1px solid #E2E8F0; padding:20px; box-shadow:0 2px 8px rgba(0,0,0,0.04);"}
+
+```{python}
+var, color = "MOD_COMPETEN_CIUDADA_PUNT", PALETA[4]
+res = medidas_localizacion_manual(df[var])
+for k, v in res.items(): print(f"  {k:<8}: {v}")
+print()
+validar_localizacion(df[var], res)
+graficar_localizacion(df[var], var, res, color)
+```
+
+:::
+
+# 5.5 Medidas de Forma
+
+```{python}
+#| echo: false
+# Las funciones medidas_forma_manual, validar_forma
+# y graficar_forma se importan desde funciones_SaberPro.py
+```
+
+## Row {.tabset}
+
+### PUNT_GLOBAL
+
+::: {style="background:#fff; border-radius:12px; border:1px solid #E2E8F0; padding:20px; box-shadow:0 2px 8px rgba(0,0,0,0.04);"}
+
+```{python}
+var, color = "PUNT_GLOBAL", PALETA[0]
+res = medidas_forma_manual(df[var])
+for k, v in res.items(): print(f"  {k:<12}: {v}")
+print()
+validar_forma(df[var], res)
+graficar_forma(df[var], var, res, color)
+```
+
+:::
+
+### MOD_INGLES_PUNT
+
+::: {style="background:#fff; border-radius:12px; border:1px solid #E2E8F0; padding:20px; box-shadow:0 2px 8px rgba(0,0,0,0.04);"}
+
+```{python}
+var, color = "MOD_INGLES_PUNT", PALETA[1]
+res = medidas_forma_manual(df[var])
+for k, v in res.items(): print(f"  {k:<12}: {v}")
+print()
+validar_forma(df[var], res)
+graficar_forma(df[var], var, res, color)
+```
+
+:::
+
+### MOD_LECTURA_CRITICA_PUNT
+
+::: {style="background:#fff; border-radius:12px; border:1px solid #E2E8F0; padding:20px; box-shadow:0 2px 8px rgba(0,0,0,0.04);"}
+
+```{python}
+var, color = "MOD_LECTURA_CRITICA_PUNT", PALETA[2]
+res = medidas_forma_manual(df[var])
+for k, v in res.items(): print(f"  {k:<12}: {v}")
+print()
+validar_forma(df[var], res)
+graficar_forma(df[var], var, res, color)
+```
+
+:::
+
+### MOD_RAZONA_CUANTITAT_PUNT
+
+::: {style="background:#fff; border-radius:12px; border:1px solid #E2E8F0; padding:20px; box-shadow:0 2px 8px rgba(0,0,0,0.04);"}
+
+```{python}
+var, color = "MOD_RAZONA_CUANTITAT_PUNT", PALETA[3]
+res = medidas_forma_manual(df[var])
+for k, v in res.items(): print(f"  {k:<12}: {v}")
+print()
+validar_forma(df[var], res)
+graficar_forma(df[var], var, res, color)
+```
+
+:::
+
+### MOD_COMPETEN_CIUDADA_PUNT
+
+::: {style="background:#fff; border-radius:12px; border:1px solid #E2E8F0; padding:20px; box-shadow:0 2px 8px rgba(0,0,0,0.04);"}
+
+```{python}
+var, color = "MOD_COMPETEN_CIUDADA_PUNT", PALETA[4]
+res = medidas_forma_manual(df[var])
+for k, v in res.items(): print(f"  {k:<12}: {v}")
+print()
+validar_forma(df[var], res)
+graficar_forma(df[var], var, res, color)
+```
+
+:::
+
+# Referencias
+
+## Row {height="auto"}
+
+### Fuente de datos
+
+::: {style="background:#fff; border-radius:12px; border:1px solid #E2E8F0; padding:24px; box-shadow:0 2px 8px rgba(0,0,0,0.04); border-top:4px solid #2563EB;"}
+
+#### Origen del dataset
+
+| Campo | Detalle |
+|:---|:---|
+| **Institución** | Instituto Colombiano para la Evaluación de la Educación — SaberPro |
+| **Prueba** | Saber 11 |
+| **Periodo** | 2023 |
+| **Región** | Caribe |
+| **Portal** | [https://www.SaberPro.gov.co/data-SaberPro](https://www.SaberPro.gov.co/data-SaberPro) |
+| **Método de acceso** | Solicitud formal mediante registro y encuesta en el portal Data SaberPro |
+| **Licencia** | Datos abiertos — uso académico e investigativo |
+| **Formato** | `.csv` — microdatos a nivel de estudiante |
+
+> Los datos fueron obtenidos tras completar el formulario de solicitud oficial del portal **Data SaberPro**, que requiere registro previo, diligenciamiento de una encuesta de uso y aprobación institucional. El archivo descargado contiene los registros individuales de los estudiantes que presentaron las pruebas Saber 11 en la región Caribe durante el año 2023.
+
+:::
+
+## Row {height="auto"}
+
+### Referencias bibliográficas
+
+::: {style="background:#fff; border-radius:12px; border:1px solid #E2E8F0; padding:28px; box-shadow:0 2px 8px rgba(0,0,0,0.04); border-top:4px solid #1E293B;"}
+
+#### Medidas de tendencia central y dispersión
+
+| # | Medida | Referencia |
+|:---:|:---|:---|
+| [1] | **Media aritmética** | Walpole, R. E., Myers, R. H., & Myers, S. L. (2012). *Probability & Statistics for Engineers and Scientists* (9.ª ed.). Pearson. Cap. 1, p. 15. |
+| [2] | **Mediana** | Montgomery, D. C., & Runger, G. C. (2018). *Applied Statistics and Probability for Engineers* (7.ª ed.). Wiley. Cap. 6, p. 200. |
+| [3] | **Moda** | Triola, M. F. (2018). *Elementary Statistics* (13.ª ed.). Pearson Education. Cap. 3, p. 86. |
+| [4] | **Desviación estándar / Varianza** | Devore, J. L. (2015). *Probability and Statistics for Engineering and the Sciences* (9.ª ed.). Cengage. Cap. 4, p. 150. |
+| [5] | **Cuartiles e IQR  (M.D.L.)** | Mendenhall, W., Beaver, R. J., & Beaver, B. M. (2013). *Introduction to Probability and Statistics* (14.ª ed.). Cengage. Cap. 2, p. 55. |
+| [6] | **Asimetría y Curtosis  (M.D.F.)** | Spiegel, M. R., & Stephens, L. J. (2008). *Statistics* (4.ª ed.). McGraw-Hill Schaum's Outlines. Cap. 4, p. 90. |
+| [7] | **Fuente de datos** | Instituto Colombiano para la Evaluación de la Educación — SaberPro. (2023). *Microdatos Saber 11*. Portal Data SaberPro. https://www.SaberPro.gov.co/data-SaberPro |
+
+:::
+

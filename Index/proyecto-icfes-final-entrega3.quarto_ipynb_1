@@ -1,0 +1,1227 @@
+{
+  "cells": [
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "---\n",
+        "title: \"Análisis y exploración del desempeño de los estudiantes en el SaberPro\"\n",
+        "format: \n",
+        "    dashboard:\n",
+        "        css: styles.css\n",
+        "        theme: flatly\n",
+        "        logo: logo.png\n",
+        "        nav-buttons:\n",
+        "            href: \"#\"\n",
+        "---"
+      ],
+      "id": "a76724c4"
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "#| echo: False\n",
+        "import pandas as pd\n",
+        "import numpy as np\n",
+        "import matplotlib\n",
+        "import matplotlib.pyplot as plt\n",
+        "import matplotlib.ticker as ticker\n",
+        "import seaborn as sns\n",
+        "from funciones_SaberPro import *\n",
+        "\n",
+        "# ── Estilo global de gráficos ──────────────────────────────────\n",
+        "plt.rcParams.update({\n",
+        "    \"figure.figsize\": (6,4),\n",
+        "    \"axes.grid\": True\n",
+        "})\n",
+        "\n",
+        "PALETA = [\"#2563EB\", \"#16A34A\", \"#DC2626\", \"#D97706\", \"#7C3AED\",\n",
+        "          \"#0891B2\", \"#DB2777\", \"#65A30D\"]"
+      ],
+      "id": "f4ff8959",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "# Presentación\n",
+        "\n",
+        "## Row\n",
+        "\n",
+        "### \n",
+        "\n",
+        "::: {style=\"display:flex; justify-content:center; align-items:center; min-height:72vh; font-family:system-ui,sans-serif;\"}\n",
+        "\n",
+        "::: {style=\"text-align:center; border:1px solid #E2E8F0; padding:48px 56px; border-radius:16px; box-shadow:0 8px 24px rgba(0,0,0,0.07); max-width:720px; background:#fff;\"}\n",
+        "\n",
+        "\n",
+        "<h1 style=\"font-size:2rem; font-weight:800; color:#1E293B; margin-bottom:12px; line-height:1.2;\">\n",
+        "Análisis y Exploración del Desempeño<br>de los Estudiantes en el SaberPro\n",
+        "</h1>\n",
+        "\n",
+        "<div style=\"width:56px; height:4px; background:linear-gradient(90deg,#2563EB,#7C3AED); margin:0 auto 28px auto; border-radius:2px;\"></div>\n",
+        "\n",
+        "<p style=\"color:#64748B; font-size:0.95rem; margin-bottom:28px;\">\n",
+        "Microdatos Saber 11 · Región Caribe · Periodo 2023\n",
+        "</p>\n",
+        "\n",
+        "<div style=\"background:#F8FAFC; border-radius:10px; padding:20px 24px; text-align:left; display:inline-block; min-width:360px;\">\n",
+        "<p style=\"font-size:0.7rem; font-weight:700; color:#94A3B8; text-transform:uppercase; letter-spacing:1px; margin-bottom:14px;\">Autores</p>\n",
+        "<p style=\"font-size:0.95rem; color:#334155; margin:6px 0;\">Santiago José Cuesta Maza · <strong>T00082473</strong></p>\n",
+        "<p style=\"font-size:0.95rem; color:#334155; margin:6px 0;\">Valeria Estefanía Berrio Payares · <strong>T00082178</strong></p>\n",
+        "<p style=\"font-size:0.95rem; color:#334155; margin:6px 0;\">Luis Eduardo Mendoza Angulo · <strong>T00082297</strong></p>\n",
+        "<p style=\"font-size:0.95rem; color:#334155; margin:6px 0;\">Deiner de Jesús Gonzalez Paredes · <strong>T00082648</strong></p>\n",
+        "<p style=\"font-size:0.95rem; color:#334155; margin:6px 0;\">Danna Valentina Zuluaga Hernández · <strong>T00082548</strong></p>\n",
+        "</div>\n",
+        "\n",
+        ":::\n",
+        "\n",
+        ":::\n",
+        "\n",
+        "# Lectura de datos\n",
+        "\n",
+        "## Row\n",
+        "\n",
+        "### Dataset cargado {height=\"100%\"}"
+      ],
+      "id": "87035437"
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "df = pd.read_csv(\"DataCaribe.csv\")\n",
+        "df"
+      ],
+      "id": "0b3ff55a",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "# Limpieza de datos\n",
+        "\n",
+        "## Row\n",
+        "\n",
+        "### Transformaciones aplicadas {height=\"100%\"}"
+      ],
+      "id": "33ab75a5"
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "#| echo: true\n",
+        "\n",
+        "# 1. Fechas\n",
+        "if df['ESTU_FECHANACIMIENTO'].dtype == 'object':\n",
+        "    df['ESTU_FECHANACIMIENTO'] = pd.to_datetime(\n",
+        "        df['ESTU_FECHANACIMIENTO'], format='%d/%m/%Y', errors='coerce')\n",
+        "\n",
+        "# 2. Extracción numérica\n",
+        "for col in ['FAMI_ESTRATOVIVIENDA', 'ESTU_SEMESTRECURSA']:\n",
+        "    if df[col].dtype == 'object':\n",
+        "        df[col] = df[col].str.extract(r'(\\d+)').astype(float)\n",
+        "\n",
+        "# 3. Imputación\n",
+        "for col in df.select_dtypes(include=[np.number]).columns:\n",
+        "    df[col] = df[col].fillna(df[col].median())\n",
+        "for col in df.select_dtypes(include=['object']).columns:\n",
+        "    if not df[col].mode().empty:\n",
+        "        df[col] = df[col].fillna(df[col].mode()[0])\n",
+        "\n",
+        "# 4. Booleanos\n",
+        "for col in ['ESTU_PAGOMATRICULACREDITO','ESTU_PAGOMATRICULAPROPIO',\n",
+        "            'ESTU_PAGOMATRICULABECA','ESTU_PAGOMATRICULAPADRES',\n",
+        "            'FAMI_TIENECOMPUTADOR','FAMI_TIENEAUTOMOVIL',\n",
+        "            'FAMI_TIENECONSOLAVIDEOJUEGOS','FAMI_TIENEINTERNET',\n",
+        "            'FAMI_TIENESERVICIOTV','FAMI_TIENEMOTOCICLETA']:\n",
+        "    if col in df.columns:\n",
+        "        df[col] = df[col].replace({'Si': True, 'No': False})\n",
+        "\n",
+        "# 5. Categorías\n",
+        "for col in ['ESTU_NACIONALIDAD','ESTU_PAIS_RESIDE','ESTU_AREARESIDE',\n",
+        "            'ESTU_GENERO','ESTU_DEPTO_RESIDE','ESTU_MCPIO_RESIDE',\n",
+        "            'ESTU_PRGM_ACADEMICO','ESTU_NIVEL_PRGM_ACADEMICO',\n",
+        "            'ESTU_METODO_PRGM','INST_CARACTER_ACADEMICO',\n",
+        "            'INST_ORIGEN','MOD_INGLES_DESEM']:\n",
+        "    if col in df.columns and df[col].dtype == 'object':\n",
+        "        df[col] = df[col].astype('category')\n",
+        "\n",
+        "df"
+      ],
+      "id": "a89c78d7",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "# Materiales y métodos\n",
+        "\n",
+        "## Row\n",
+        "\n",
+        "### \n",
+        "\n",
+        "::: {style=\"overflow-y:auto; padding:28px; background:#F8FAFC; height:100%;\"}\n",
+        "\n",
+        "::: {style=\"display:grid; grid-template-columns:repeat(auto-fit,minmax(380px,1fr)); gap:24px; margin-bottom:24px;\"}\n",
+        "\n",
+        "::: {style=\"background:#fff; padding:24px; border-radius:12px; border:1px solid #E2E8F0; box-shadow:0 2px 8px rgba(0,0,0,0.04); border-top:4px solid #2563EB;\"}\n",
+        "#### 📂 Origen de la información\n",
+        "\n",
+        "El análisis se fundamenta en los **microdatos de las pruebas de Estado**, registros a nivel de individuo proporcionados por el **SaberPro** a través de su **Portal Data SaberPro**.\n",
+        "\n",
+        "**Población objetivo** — Cohorte de estudiantes de la **región Caribe**, periodo **2023**. Permite un análisis localizado y actual de brechas educativas.\n",
+        ":::\n",
+        "\n",
+        "::: {style=\"background:#fff; padding:24px; border-radius:12px; border:1px solid #E2E8F0; box-shadow:0 2px 8px rgba(0,0,0,0.04); border-top:4px solid #16A34A;\"}\n",
+        "#### 🛠 Ingeniería de datos con Python\n",
+        "\n",
+        "- **Tipificación** — Conversión de `object` a tipos numéricos y fecha.\n",
+        "- **Optimización de memoria** — Variables categóricas con tipo `category`.\n",
+        "- **Imputación** — Mediana para puntajes, moda para variables nominales.\n",
+        "- **Booleanos** — Variables Sí/No convertidas a `True`/`False`.\n",
+        ":::\n",
+        "\n",
+        ":::\n",
+        "\n",
+        "::: {style=\"background:#fff; padding:24px; border-radius:12px; border:1px solid #E2E8F0; box-shadow:0 2px 8px rgba(0,0,0,0.04); border-top:4px solid #7C3AED;\"}\n",
+        "#### 📋 Ficha Técnica de Variables\n",
+        "\n",
+        "| Variable | Tipo | n | Descripción |\n",
+        "|:---|:---:|:---:|:---|\n",
+        "| **PUNT_GLOBAL** | Continuo | 131,184 | Puntaje total del estudiante (0–500) |\n",
+        "| **MOD_INGLES_PUNT** | Continuo | 131,184 | Puntaje módulo bilingüismo |\n",
+        "| **MOD_LECTURA_CRITICA_PUNT** | Continuo | 131,184 | Puntaje lectura crítica |\n",
+        "| **MOD_RAZONA_CUANTITAT_PUNT** | Continuo | 131,184 | Puntaje razonamiento cuantitativo |\n",
+        "| **MOD_COMPETEN_CIUDADA_PUNT** | Continuo | 131,184 | Puntaje competencias ciudadanas |\n",
+        "| **ESTU_GENERO** | Nominal | 131,184 | Género del examinado |\n",
+        "| **FAMI_TIENEINTERNET** | Nominal | 131,184 | Acceso a internet en el hogar |\n",
+        "| **FAMI_TIENECOMPUTADOR** | Nominal | 131,184 | Computador en el hogar |\n",
+        "| **ESTU_AREARESIDE** | Nominal | 131,184 | Área de residencia |\n",
+        "| **ESTU_DEPTO_RESIDE** | Nominal | 131,184 | Departamento de residencia |\n",
+        "\n",
+        ":::\n",
+        "\n",
+        ":::\n",
+        "\n",
+        "# 5.1 Diagnóstico NAs\n",
+        "\n",
+        "## Row\n",
+        "\n",
+        "### Función manual — diagnóstico {height=\"100%\"}\n",
+        "\n",
+        "::: {style=\"background:#fff; border-radius:12px; border:1px solid #E2E8F0; padding:20px; box-shadow:0 2px 8px rgba(0,0,0,0.04);\"}\n",
+        "\n",
+        "> **Dataset:** `df` (cargado, sin limpiar) · Función manual sin `isnull()`, `duplicated()` ni `sum()` de pandas."
+      ],
+      "id": "30109b5f"
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "tabla_na_manual, dup_manual, n_manual = diagnostico_manual(df)\n",
+        "\n",
+        "print(f\"Total filas (manual) : {n_manual:,}\")\n",
+        "print(f\"Duplicados  (manual) : {dup_manual:,}\\n\")\n",
+        "print(\"Top 10 variables con más NAs:\")\n",
+        "print(tabla_na_manual.head(10).to_string(index=False))"
+      ],
+      "id": "2655b090",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        ":::\n",
+        "\n",
+        "### Validación nativa {height=\"100%\"}\n",
+        "\n",
+        "::: {style=\"background:#fff; border-radius:12px; border:1px solid #E2E8F0; padding:20px; box-shadow:0 2px 8px rgba(0,0,0,0.04);\"}"
+      ],
+      "id": "45858a5c"
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "n_nativo   = len(df)\n",
+        "dup_nativo = df.duplicated().sum()\n",
+        "\n",
+        "na_nativa = (df.isnull().sum()\n",
+        "    .reset_index()\n",
+        "    .rename(columns={\"index\":\"Variable\", 0:\"NAs (nativa)\"}))\n",
+        "na_nativa[\"% NA (nativa)\"] = round(na_nativa[\"NAs (nativa)\"] / n_nativo * 100, 4)\n",
+        "na_nativa = na_nativa.sort_values(\"% NA (nativa)\", ascending=False).reset_index(drop=True)\n",
+        "\n",
+        "print(f\"Total filas (nativa) : {n_nativo:,}\")\n",
+        "print(f\"Duplicados  (nativa) : {dup_nativo:,}\\n\")\n",
+        "print(\"Top 10 variables con más NAs:\")\n",
+        "print(na_nativa.head(10).to_string(index=False))"
+      ],
+      "id": "71f30d7b",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "comp = tabla_na_manual.merge(na_nativa, on=\"Variable\", how=\"left\")\n",
+        "comp[\"Coincide\"] = comp[\"NAs (manual)\"] == comp[\"NAs (nativa)\"]\n",
+        "errores = comp[comp[\"Coincide\"] == False]\n",
+        "if errores.empty:\n",
+        "    print(\"Todos los conteos de NA coinciden entre función manual y nativa.\")\n",
+        "else:\n",
+        "    print(\"Hay diferencias:\")\n",
+        "    print(errores.to_string(index=False))"
+      ],
+      "id": "df1f2963",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        ":::\n",
+        "\n",
+        "### Gráfico Top 10 NAs {height=\"100%\"}\n",
+        "\n",
+        "::: {style=\"background:#fff; border-radius:12px; border:1px solid #E2E8F0; padding:20px; box-shadow:0 2px 8px rgba(0,0,0,0.04);\"}"
+      ],
+      "id": "25892be0"
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "top10 = tabla_na_manual.head(10)\n",
+        "fig, ax = plt.subplots(figsize=(7, 4))\n",
+        "colors = [PALETA[0] if x > 10 else PALETA[1] for x in top10[\"% NA (manual)\"][::-1]]\n",
+        "bars = ax.barh(top10[\"Variable\"][::-1], top10[\"% NA (manual)\"][::-1],\n",
+        "               color=colors, edgecolor=\"white\", linewidth=0.5)\n",
+        "ax.bar_label(bars, fmt=\"%.2f%%\", padding=4, fontsize=8, color=\"#374151\")\n",
+        "ax.set_xlabel(\"% de valores nulos\")\n",
+        "ax.set_title(\"Top 10 variables con mayor % de NAs\", fontweight=\"bold\", pad=10)\n",
+        "ax.set_xlim(0, top10[\"% NA (manual)\"].max() * 1.18)\n",
+        "plt.tight_layout()\n",
+        "plt.show()"
+      ],
+      "id": "c4275d9b",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        ":::\n",
+        "\n",
+        "\n",
+        "\n",
+        "# 5.2 Vars. Cualitativas"
+      ],
+      "id": "14c6d191"
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "#| echo: false\n",
+        "PALETA = [\"#2563EB\", \"#16A34A\", \"#DC2626\", \"#D97706\", \"#7C3AED\"]\n",
+        "\n",
+        "VARS_CUAL = [\n",
+        "    (\"ESTU_GENERO\",         PALETA[0]),\n",
+        "    (\"FAMI_TIENEINTERNET\",  PALETA[1]),\n",
+        "    (\"FAMI_TIENECOMPUTADOR\",PALETA[2]),\n",
+        "    (\"ESTU_AREARESIDE\",     PALETA[3]),\n",
+        "    (\"ESTU_DEPTO_RESIDE\",   PALETA[4]),\n",
+        "]"
+      ],
+      "id": "786c959f",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "## Row {.tabset}\n",
+        "\n",
+        "### ESTU_GENERO\n",
+        "\n",
+        "::: {style=\"background:#fff; border-radius:12px; border:1px solid #E2E8F0; padding:20px; box-shadow:0 2px 8px rgba(0,0,0,0.04);\"}\n",
+        "\n",
+        "> **Dataset:** `df` limpio. Función manual sin `value_counts()`, `mode()`, `groupby()` ni `crosstab()`."
+      ],
+      "id": "3ca4ea41"
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "var, color = \"ESTU_GENERO\", PALETA[0]\n",
+        "tabla, moda = frecuencia_cualitativa_manual(df[var])\n",
+        "print(tabla.to_string(index=False))\n",
+        "print(f\"\\n  Moda: {moda}\")\n",
+        "validar_cualitativa(df[var], tabla, moda)\n",
+        "graficar_cualitativa(tabla, var, color)"
+      ],
+      "id": "91d0c64c",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        ":::\n",
+        "\n",
+        "### FAMI_TIENEINTERNET\n",
+        "\n",
+        "::: {style=\"background:#fff; border-radius:12px; border:1px solid #E2E8F0; padding:20px; box-shadow:0 2px 8px rgba(0,0,0,0.04);\"}"
+      ],
+      "id": "962be2c3"
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "var, color = \"FAMI_TIENEINTERNET\", PALETA[1]\n",
+        "tabla, moda = frecuencia_cualitativa_manual(df[var])\n",
+        "print(tabla.to_string(index=False))\n",
+        "print(f\"\\n  Moda: {moda}\")\n",
+        "validar_cualitativa(df[var], tabla, moda)\n",
+        "graficar_cualitativa(tabla, var, color)"
+      ],
+      "id": "3d83adaf",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        ":::\n",
+        "\n",
+        "### FAMI_TIENECOMPUTADOR\n",
+        "\n",
+        "::: {style=\"background:#fff; border-radius:12px; border:1px solid #E2E8F0; padding:20px; box-shadow:0 2px 8px rgba(0,0,0,0.04);\"}"
+      ],
+      "id": "fb898f8f"
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "var, color = \"FAMI_TIENECOMPUTADOR\", PALETA[2]\n",
+        "tabla, moda = frecuencia_cualitativa_manual(df[var])\n",
+        "print(tabla.to_string(index=False))\n",
+        "print(f\"\\n  Moda: {moda}\")\n",
+        "validar_cualitativa(df[var], tabla, moda)\n",
+        "graficar_cualitativa(tabla, var, color)"
+      ],
+      "id": "2b1af90d",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        ":::\n",
+        "\n",
+        "### ESTU_AREARESIDE\n",
+        "\n",
+        "::: {style=\"background:#fff; border-radius:12px; border:1px solid #E2E8F0; padding:20px; box-shadow:0 2px 8px rgba(0,0,0,0.04);\"}"
+      ],
+      "id": "08a54205"
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "var, color = \"ESTU_AREARESIDE\", PALETA[3]\n",
+        "tabla, moda = frecuencia_cualitativa_manual(df[var])\n",
+        "print(tabla.to_string(index=False))\n",
+        "print(f\"\\n  Moda: {moda}\")\n",
+        "validar_cualitativa(df[var], tabla, moda)\n",
+        "graficar_cualitativa(tabla, var, color)"
+      ],
+      "id": "a19a9c3a",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        ":::\n",
+        "\n",
+        "### ESTU_DEPTO_RESIDE\n",
+        "\n",
+        "::: {style=\"background:#fff; border-radius:12px; border:1px solid #E2E8F0; padding:20px; box-shadow:0 2px 8px rgba(0,0,0,0.04);\"}"
+      ],
+      "id": "1e2a4c4d"
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "var, color = \"ESTU_DEPTO_RESIDE\", PALETA[4]\n",
+        "tabla, moda = frecuencia_cualitativa_manual(df[var])\n",
+        "print(tabla.to_string(index=False))\n",
+        "print(f\"\\n  Moda: {moda}\")\n",
+        "validar_cualitativa(df[var], tabla, moda)\n",
+        "graficar_cualitativa(tabla, var, color)"
+      ],
+      "id": "c0dbdb06",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        ":::\n",
+        "\n",
+        "# 5.3 Vars. Cuantitativas"
+      ],
+      "id": "92f0e794"
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "#| echo: false\n",
+        "VARS_CUANT = [\n",
+        "    (\"PUNT_GLOBAL\",              PALETA[0]),\n",
+        "    (\"MOD_INGLES_PUNT\",          PALETA[1]),\n",
+        "    (\"MOD_LECTURA_CRITICA_PUNT\", PALETA[2]),\n",
+        "    (\"MOD_RAZONA_CUANTITAT_PUNT\",PALETA[3]),\n",
+        "    (\"MOD_COMPETEN_CIUDADA_PUNT\",PALETA[4]),\n",
+        "]"
+      ],
+      "id": "ae841028",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "## Row {.tabset}\n",
+        "\n",
+        "### PUNT_GLOBAL\n",
+        "\n",
+        "::: {style=\"background:#fff; border-radius:12px; border:1px solid #E2E8F0; padding:20px; box-shadow:0 2px 8px rgba(0,0,0,0.04);\"}\n",
+        "\n",
+        "> **Dataset:** `df` limpio. Función manual sin `mean()`, `median()`, `mode()`, `std()`."
+      ],
+      "id": "475eecbb"
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "var, color = \"PUNT_GLOBAL\", PALETA[0]\n",
+        "res = estadisticas_cuantitativas_manual(df[var])\n",
+        "for k, v in res.items(): print(f\"  {k:<12}: {v}\")\n",
+        "print()\n",
+        "validar_cuantitativa(df[var], res)\n",
+        "graficar_cuantitativa(df[var], var, res, color)"
+      ],
+      "id": "5aaad76a",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        ":::\n",
+        "\n",
+        "### MOD_INGLES_PUNT\n",
+        "\n",
+        "::: {style=\"background:#fff; border-radius:12px; border:1px solid #E2E8F0; padding:20px; box-shadow:0 2px 8px rgba(0,0,0,0.04);\"}"
+      ],
+      "id": "5c3a1446"
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "var, color = \"MOD_INGLES_PUNT\", PALETA[1]\n",
+        "res = estadisticas_cuantitativas_manual(df[var])\n",
+        "for k, v in res.items(): print(f\"  {k:<12}: {v}\")\n",
+        "print()\n",
+        "validar_cuantitativa(df[var], res)\n",
+        "graficar_cuantitativa(df[var], var, res, color)"
+      ],
+      "id": "cf3228fa",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        ":::\n",
+        "\n",
+        "### MOD_LECTURA_CRITICA_PUNT\n",
+        "\n",
+        "::: {style=\"background:#fff; border-radius:12px; border:1px solid #E2E8F0; padding:20px; box-shadow:0 2px 8px rgba(0,0,0,0.04);\"}"
+      ],
+      "id": "cf2821fc"
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "var, color = \"MOD_LECTURA_CRITICA_PUNT\", PALETA[2]\n",
+        "res = estadisticas_cuantitativas_manual(df[var])\n",
+        "for k, v in res.items(): print(f\"  {k:<12}: {v}\")\n",
+        "print()\n",
+        "validar_cuantitativa(df[var], res)\n",
+        "graficar_cuantitativa(df[var], var, res, color)"
+      ],
+      "id": "c3d43f8a",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        ":::\n",
+        "\n",
+        "### MOD_RAZONA_CUANTITAT_PUNT\n",
+        "\n",
+        "::: {style=\"background:#fff; border-radius:12px; border:1px solid #E2E8F0; padding:20px; box-shadow:0 2px 8px rgba(0,0,0,0.04);\"}"
+      ],
+      "id": "e836383c"
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "var, color = \"MOD_RAZONA_CUANTITAT_PUNT\", PALETA[3]\n",
+        "res = estadisticas_cuantitativas_manual(df[var])\n",
+        "for k, v in res.items(): print(f\"  {k:<12}: {v}\")\n",
+        "print()\n",
+        "validar_cuantitativa(df[var], res)\n",
+        "graficar_cuantitativa(df[var], var, res, color)"
+      ],
+      "id": "7b88062c",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        ":::\n",
+        "\n",
+        "### MOD_COMPETEN_CIUDADA_PUNT\n",
+        "\n",
+        "::: {style=\"background:#fff; border-radius:12px; border:1px solid #E2E8F0; padding:20px; box-shadow:0 2px 8px rgba(0,0,0,0.04);\"}"
+      ],
+      "id": "2b48c8f0"
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "var, color = \"MOD_COMPETEN_CIUDADA_PUNT\", PALETA[4]\n",
+        "res = estadisticas_cuantitativas_manual(df[var])\n",
+        "for k, v in res.items(): print(f\"  {k:<12}: {v}\")\n",
+        "print()\n",
+        "validar_cuantitativa(df[var], res)\n",
+        "graficar_cuantitativa(df[var], var, res, color)"
+      ],
+      "id": "6f6461ff",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        ":::\n",
+        "\n",
+        "# 5.4 Medidas de Localización"
+      ],
+      "id": "f4d20456"
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "#| echo: false\n",
+        "# Las funciones medidas_localizacion_manual, validar_localizacion\n",
+        "# y graficar_localizacion se importan desde funciones_SaberPro.py"
+      ],
+      "id": "ad2bdbc1",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "## Row {.tabset}\n",
+        "\n",
+        "### PUNT_GLOBAL\n",
+        "\n",
+        "::: {style=\"background:#fff; border-radius:12px; border:1px solid #E2E8F0; padding:20px; box-shadow:0 2px 8px rgba(0,0,0,0.04);\"}\n",
+        "\n",
+        "> **M.D.L. — Medidas de localización:** Q1, Q2, Q3 calculados manualmente con interpolación lineal. Sin `quantile()` de pandas."
+      ],
+      "id": "b2998c70"
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "var, color = \"PUNT_GLOBAL\", PALETA[0]\n",
+        "res = medidas_localizacion_manual(df[var])\n",
+        "for k, v in res.items(): print(f\"  {k:<8}: {v}\")\n",
+        "print()\n",
+        "validar_localizacion(df[var], res)\n",
+        "graficar_localizacion(df[var], var, res, color)"
+      ],
+      "id": "cd6fcc43",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        ":::\n",
+        "\n",
+        "### MOD_INGLES_PUNT\n",
+        "\n",
+        "::: {style=\"background:#fff; border-radius:12px; border:1px solid #E2E8F0; padding:20px; box-shadow:0 2px 8px rgba(0,0,0,0.04);\"}"
+      ],
+      "id": "6fb4ceb1"
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "var, color = \"MOD_INGLES_PUNT\", PALETA[1]\n",
+        "res = medidas_localizacion_manual(df[var])\n",
+        "for k, v in res.items(): print(f\"  {k:<8}: {v}\")\n",
+        "print()\n",
+        "validar_localizacion(df[var], res)\n",
+        "graficar_localizacion(df[var], var, res, color)"
+      ],
+      "id": "7418af99",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        ":::\n",
+        "\n",
+        "### MOD_LECTURA_CRITICA_PUNT\n",
+        "\n",
+        "::: {style=\"background:#fff; border-radius:12px; border:1px solid #E2E8F0; padding:20px; box-shadow:0 2px 8px rgba(0,0,0,0.04);\"}"
+      ],
+      "id": "eda29e46"
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "var, color = \"MOD_LECTURA_CRITICA_PUNT\", PALETA[2]\n",
+        "res = medidas_localizacion_manual(df[var])\n",
+        "for k, v in res.items(): print(f\"  {k:<8}: {v}\")\n",
+        "print()\n",
+        "validar_localizacion(df[var], res)\n",
+        "graficar_localizacion(df[var], var, res, color)"
+      ],
+      "id": "74740408",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        ":::\n",
+        "\n",
+        "### MOD_RAZONA_CUANTITAT_PUNT\n",
+        "\n",
+        "::: {style=\"background:#fff; border-radius:12px; border:1px solid #E2E8F0; padding:20px; box-shadow:0 2px 8px rgba(0,0,0,0.04);\"}"
+      ],
+      "id": "5eb48cfe"
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "var, color = \"MOD_RAZONA_CUANTITAT_PUNT\", PALETA[3]\n",
+        "res = medidas_localizacion_manual(df[var])\n",
+        "for k, v in res.items(): print(f\"  {k:<8}: {v}\")\n",
+        "print()\n",
+        "validar_localizacion(df[var], res)\n",
+        "graficar_localizacion(df[var], var, res, color)"
+      ],
+      "id": "f190246d",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        ":::\n",
+        "\n",
+        "### MOD_COMPETEN_CIUDADA_PUNT\n",
+        "\n",
+        "::: {style=\"background:#fff; border-radius:12px; border:1px solid #E2E8F0; padding:20px; box-shadow:0 2px 8px rgba(0,0,0,0.04);\"}"
+      ],
+      "id": "7d04d8d6"
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "var, color = \"MOD_COMPETEN_CIUDADA_PUNT\", PALETA[4]\n",
+        "res = medidas_localizacion_manual(df[var])\n",
+        "for k, v in res.items(): print(f\"  {k:<8}: {v}\")\n",
+        "print()\n",
+        "validar_localizacion(df[var], res)\n",
+        "graficar_localizacion(df[var], var, res, color)"
+      ],
+      "id": "27843fa3",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        ":::\n",
+        "\n",
+        "# 5.5 Medidas de Forma"
+      ],
+      "id": "6f3c28e2"
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "#| echo: false\n",
+        "# Las funciones medidas_forma_manual, validar_forma\n",
+        "# y graficar_forma se importan desde funciones_SaberPro.py"
+      ],
+      "id": "1c3fe941",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "## Row {.tabset}\n",
+        "\n",
+        "### PUNT_GLOBAL\n",
+        "\n",
+        "::: {style=\"background:#fff; border-radius:12px; border:1px solid #E2E8F0; padding:20px; box-shadow:0 2px 8px rgba(0,0,0,0.04);\"}\n",
+        "\n",
+        "> **M.D.F. — Medidas de forma:** Asimetría (sesgo) y curtosis poblacional calculados manualmente. Sin `skew()` ni `kurt()` de pandas."
+      ],
+      "id": "41e6b246"
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "var, color = \"PUNT_GLOBAL\", PALETA[0]\n",
+        "res = medidas_forma_manual(df[var])\n",
+        "for k, v in res.items(): print(f\"  {k:<12}: {v}\")\n",
+        "print()\n",
+        "validar_forma(df[var], res)\n",
+        "graficar_forma(df[var], var, res, color)"
+      ],
+      "id": "903dae54",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        ":::\n",
+        "\n",
+        "### MOD_INGLES_PUNT\n",
+        "\n",
+        "::: {style=\"background:#fff; border-radius:12px; border:1px solid #E2E8F0; padding:20px; box-shadow:0 2px 8px rgba(0,0,0,0.04);\"}"
+      ],
+      "id": "a366ea68"
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "var, color = \"MOD_INGLES_PUNT\", PALETA[1]\n",
+        "res = medidas_forma_manual(df[var])\n",
+        "for k, v in res.items(): print(f\"  {k:<12}: {v}\")\n",
+        "print()\n",
+        "validar_forma(df[var], res)\n",
+        "graficar_forma(df[var], var, res, color)"
+      ],
+      "id": "3b98b354",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        ":::\n",
+        "\n",
+        "### MOD_LECTURA_CRITICA_PUNT\n",
+        "\n",
+        "::: {style=\"background:#fff; border-radius:12px; border:1px solid #E2E8F0; padding:20px; box-shadow:0 2px 8px rgba(0,0,0,0.04);\"}"
+      ],
+      "id": "82e616a2"
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "var, color = \"MOD_LECTURA_CRITICA_PUNT\", PALETA[2]\n",
+        "res = medidas_forma_manual(df[var])\n",
+        "for k, v in res.items(): print(f\"  {k:<12}: {v}\")\n",
+        "print()\n",
+        "validar_forma(df[var], res)\n",
+        "graficar_forma(df[var], var, res, color)"
+      ],
+      "id": "5eba00fd",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        ":::\n",
+        "\n",
+        "### MOD_RAZONA_CUANTITAT_PUNT\n",
+        "\n",
+        "::: {style=\"background:#fff; border-radius:12px; border:1px solid #E2E8F0; padding:20px; box-shadow:0 2px 8px rgba(0,0,0,0.04);\"}"
+      ],
+      "id": "06cf8f63"
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "var, color = \"MOD_RAZONA_CUANTITAT_PUNT\", PALETA[3]\n",
+        "res = medidas_forma_manual(df[var])\n",
+        "for k, v in res.items(): print(f\"  {k:<12}: {v}\")\n",
+        "print()\n",
+        "validar_forma(df[var], res)\n",
+        "graficar_forma(df[var], var, res, color)"
+      ],
+      "id": "6671a240",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        ":::\n",
+        "\n",
+        "### MOD_COMPETEN_CIUDADA_PUNT\n",
+        "\n",
+        "::: {style=\"background:#fff; border-radius:12px; border:1px solid #E2E8F0; padding:20px; box-shadow:0 2px 8px rgba(0,0,0,0.04);\"}"
+      ],
+      "id": "d4497ade"
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "var, color = \"MOD_COMPETEN_CIUDADA_PUNT\", PALETA[4]\n",
+        "res = medidas_forma_manual(df[var])\n",
+        "for k, v in res.items(): print(f\"  {k:<12}: {v}\")\n",
+        "print()\n",
+        "validar_forma(df[var], res)\n",
+        "graficar_forma(df[var], var, res, color)"
+      ],
+      "id": "74613db9",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        ":::\n",
+        "\n",
+        "# Referencias\n",
+        "\n",
+        "## Row {height=\"auto\"}\n",
+        "\n",
+        "### Fuente de datos\n",
+        "\n",
+        "::: {style=\"background:#fff; border-radius:12px; border:1px solid #E2E8F0; padding:24px; box-shadow:0 2px 8px rgba(0,0,0,0.04); border-top:4px solid #2563EB;\"}\n",
+        "\n",
+        "#### Origen del dataset\n",
+        "\n",
+        "| Campo | Detalle |\n",
+        "|:---|:---|\n",
+        "| **Institución** | Instituto Colombiano para la Evaluación de la Educación — SaberPro |\n",
+        "| **Prueba** | Saber 11 |\n",
+        "| **Periodo** | 2023 |\n",
+        "| **Región** | Caribe |\n",
+        "| **Portal** | [https://www.SaberPro.gov.co/data-SaberPro](https://www.SaberPro.gov.co/data-SaberPro) |\n",
+        "| **Método de acceso** | Solicitud formal mediante registro y encuesta en el portal Data SaberPro |\n",
+        "| **Licencia** | Datos abiertos — uso académico e investigativo |\n",
+        "| **Formato** | `.csv` — microdatos a nivel de estudiante |\n",
+        "\n",
+        "> Los datos fueron obtenidos tras completar el formulario de solicitud oficial del portal **Data SaberPro**, que requiere registro previo, diligenciamiento de una encuesta de uso y aprobación institucional. El archivo descargado contiene los registros individuales de los estudiantes que presentaron las pruebas Saber 11 en la región Caribe durante el año 2023.\n",
+        "\n",
+        ":::\n",
+        "\n",
+        "## Row {height=\"auto\"}\n",
+        "\n",
+        "### Fórmulas — Tendencia Central y Dispersión"
+      ],
+      "id": "fb0f3d22"
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "#| echo: false\n",
+        "import matplotlib.pyplot as plt\n",
+        "import matplotlib.patches as mpatches\n",
+        "\n",
+        "fig, axes = plt.subplots(2, 3, figsize=(14, 6))\n",
+        "fig.patch.set_facecolor(\"#F8FAFC\")\n",
+        "fig.suptitle(\"Fórmulas — Medidas de Tendencia Central y Dispersión\",\n",
+        "             fontsize=12, fontweight=\"bold\", color=\"#1E293B\", y=1.02)\n",
+        "\n",
+        "formulas = [\n",
+        "    (\"Media aritmética\",\n",
+        "     r\"$\\bar{x} = \\dfrac{1}{n}\\sum_{i=1}^{n} x_i$\",\n",
+        "     \"Suma de todos los valores\\ndividida entre n.\",\n",
+        "     \"#2563EB\"),\n",
+        "    (\"Mediana  (n impar)\",\n",
+        "     r\"$\\tilde{x} = x_{\\left(\\frac{n+1}{2}\\right)}$\",\n",
+        "     \"Valor central al ordenar\\nlos datos de menor a mayor.\",\n",
+        "     \"#16A34A\"),\n",
+        "    (\"Mediana  (n par)\",\n",
+        "     r\"$\\tilde{x} = \\dfrac{x_{\\frac{n}{2}} + x_{\\frac{n}{2}+1}}{2}$\",\n",
+        "     \"Promedio de los dos\\nvalores centrales.\",\n",
+        "     \"#16A34A\"),\n",
+        "    (\"Moda\",\n",
+        "     r\"$Mo = \\arg\\max_{x}\\; f(x)$\",\n",
+        "     \"Valor con mayor\\nfrecuencia absoluta.\",\n",
+        "     \"#D97706\"),\n",
+        "    (\"Desv. estándar poblacional\",\n",
+        "     r\"$\\sigma = \\sqrt{\\dfrac{1}{n}\\sum_{i=1}^{n}(x_i - \\bar{x})^2}$\",\n",
+        "     \"Raíz cuadrada de la media\\nde las desviaciones al cuadrado.\",\n",
+        "     \"#DC2626\"),\n",
+        "    (\"Rango\",\n",
+        "     r\"$R = x_{\\max} - x_{\\min}$\",\n",
+        "     \"Diferencia entre el valor\\nmáximo y el mínimo.\",\n",
+        "     \"#7C3AED\"),\n",
+        "]\n",
+        "\n",
+        "for ax, (titulo, formula, desc, color) in zip(axes.flat, formulas):\n",
+        "    ax.set_facecolor(\"#FFFFFF\")\n",
+        "    for sp in ax.spines.values():\n",
+        "        sp.set_edgecolor(color)\n",
+        "        sp.set_linewidth(2.2)\n",
+        "    ax.axis(\"off\")\n",
+        "    ax.add_patch(mpatches.FancyBboxPatch(\n",
+        "        (0.0, 0.88), 1.0, 0.12, transform=ax.transAxes,\n",
+        "        boxstyle=\"square,pad=0\", facecolor=color, edgecolor=\"none\", clip_on=False))\n",
+        "    ax.text(0.5, 0.935, titulo, transform=ax.transAxes,\n",
+        "            fontsize=9, fontweight=\"bold\", color=\"white\", ha=\"center\", va=\"center\")\n",
+        "    ax.text(0.5, 0.57, formula, transform=ax.transAxes,\n",
+        "            fontsize=15, ha=\"center\", va=\"center\", color=\"#1E293B\",\n",
+        "            bbox=dict(boxstyle=\"round,pad=0.4\", facecolor=color+\"18\", edgecolor=color+\"55\"))\n",
+        "    ax.text(0.5, 0.13, desc, transform=ax.transAxes,\n",
+        "            fontsize=8, ha=\"center\", va=\"center\", color=\"#475569\", style=\"italic\")\n",
+        "\n",
+        "plt.tight_layout(pad=1.2)\n",
+        "plt.show()"
+      ],
+      "id": "751f5423",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "## Row {height=\"auto\"}\n",
+        "\n",
+        "### Fórmulas — Localización (M.D.L.)"
+      ],
+      "id": "73669b83"
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "#| echo: false\n",
+        "fig, axes = plt.subplots(1, 3, figsize=(14, 4))\n",
+        "fig.patch.set_facecolor(\"#F8FAFC\")\n",
+        "fig.suptitle(\"Fórmulas — Medidas de Localización  (Q1 · Q2 · Q3 · IQR)\",\n",
+        "             fontsize=12, fontweight=\"bold\", color=\"#1E293B\", y=1.02)\n",
+        "\n",
+        "formulas_loc = [\n",
+        "    (\"Índice de interpolación\",\n",
+        "     r\"$k = (n-1)\\cdot p$\" + \"\\n\" + r\"$i = \\lfloor k \\rfloor, \\quad d = k - i$\",\n",
+        "     \"Base del cálculo manual\\nde percentiles.\",\n",
+        "     \"#2563EB\"),\n",
+        "    (\"Percentil por interpolación lineal\",\n",
+        "     r\"$P_p = x_{[i]} + d\\,(x_{[i+1]} - x_{[i]})$\",\n",
+        "     \"Aplicado con p=0.25, 0.50, 0.75\\npara obtener Q1, Q2 y Q3.\",\n",
+        "     \"#16A34A\"),\n",
+        "    (\"Rango intercuartílico\",\n",
+        "     r\"$IQR = Q_3 - Q_1$\",\n",
+        "     \"Dispersión del 50% central.\\nRobusto ante valores atípicos.\",\n",
+        "     \"#DC2626\"),\n",
+        "]\n",
+        "\n",
+        "for ax, (titulo, formula, desc, color) in zip(axes.flat, formulas_loc):\n",
+        "    ax.set_facecolor(\"#FFFFFF\")\n",
+        "    for sp in ax.spines.values():\n",
+        "        sp.set_edgecolor(color)\n",
+        "        sp.set_linewidth(2.2)\n",
+        "    ax.axis(\"off\")\n",
+        "    ax.add_patch(mpatches.FancyBboxPatch(\n",
+        "        (0.0, 0.88), 1.0, 0.12, transform=ax.transAxes,\n",
+        "        boxstyle=\"square,pad=0\", facecolor=color, edgecolor=\"none\", clip_on=False))\n",
+        "    ax.text(0.5, 0.935, titulo, transform=ax.transAxes,\n",
+        "            fontsize=9, fontweight=\"bold\", color=\"white\", ha=\"center\", va=\"center\")\n",
+        "    ax.text(0.5, 0.55, formula, transform=ax.transAxes,\n",
+        "            fontsize=14, ha=\"center\", va=\"center\", color=\"#1E293B\",\n",
+        "            bbox=dict(boxstyle=\"round,pad=0.4\", facecolor=color+\"18\", edgecolor=color+\"55\"))\n",
+        "    ax.text(0.5, 0.13, desc, transform=ax.transAxes,\n",
+        "            fontsize=8, ha=\"center\", va=\"center\", color=\"#475569\", style=\"italic\")\n",
+        "\n",
+        "plt.tight_layout(pad=1.2)\n",
+        "plt.show()"
+      ],
+      "id": "226e1cc3",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "## Row {height=\"auto\"}\n",
+        "\n",
+        "### Fórmulas — Forma (M.D.F.)"
+      ],
+      "id": "9ebe63f7"
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "#| echo: false\n",
+        "fig, axes = plt.subplots(1, 2, figsize=(10, 4))\n",
+        "fig.patch.set_facecolor(\"#F8FAFC\")\n",
+        "fig.suptitle(\"Fórmulas — Medidas de Forma  (Asimetría · Curtosis)\",\n",
+        "             fontsize=12, fontweight=\"bold\", color=\"#1E293B\", y=1.02)\n",
+        "\n",
+        "formulas_forma = [\n",
+        "    (\"Asimetría  (Skewness poblacional)\",\n",
+        "     r\"$g_1 = \\dfrac{\\frac{1}{n}\\sum_{i=1}^{n}(x_i - \\bar{x})^3}{\\sigma^3}$\",\n",
+        "     r\"$g_1 < 0$: cola izq.  ·  $g_1 \\approx 0$: simétrica  ·  $g_1 > 0$: cola der.\",\n",
+        "     \"#D97706\"),\n",
+        "    (\"Curtosis  (Kurtosis poblacional)\",\n",
+        "     r\"$g_2 = \\dfrac{\\frac{1}{n}\\sum_{i=1}^{n}(x_i - \\bar{x})^4}{\\sigma^4}$\",\n",
+        "     r\"$g_2 < 3$: platicúrtica  ·  $g_2 = 3$: mesocúrtica  ·  $g_2 > 3$: leptocúrtica\",\n",
+        "     \"#7C3AED\"),\n",
+        "]\n",
+        "\n",
+        "for ax, (titulo, formula, interp, color) in zip(axes.flat, formulas_forma):\n",
+        "    ax.set_facecolor(\"#FFFFFF\")\n",
+        "    for sp in ax.spines.values():\n",
+        "        sp.set_edgecolor(color)\n",
+        "        sp.set_linewidth(2.2)\n",
+        "    ax.axis(\"off\")\n",
+        "    ax.add_patch(mpatches.FancyBboxPatch(\n",
+        "        (0.0, 0.88), 1.0, 0.12, transform=ax.transAxes,\n",
+        "        boxstyle=\"square,pad=0\", facecolor=color, edgecolor=\"none\", clip_on=False))\n",
+        "    ax.text(0.5, 0.935, titulo, transform=ax.transAxes,\n",
+        "            fontsize=9.5, fontweight=\"bold\", color=\"white\", ha=\"center\", va=\"center\")\n",
+        "    ax.text(0.5, 0.60, formula, transform=ax.transAxes,\n",
+        "            fontsize=16, ha=\"center\", va=\"center\", color=\"#1E293B\",\n",
+        "            bbox=dict(boxstyle=\"round,pad=0.5\", facecolor=color+\"18\", edgecolor=color+\"55\"))\n",
+        "    ax.text(0.5, 0.11, interp, transform=ax.transAxes,\n",
+        "            fontsize=8, ha=\"center\", va=\"center\", color=\"#475569\", style=\"italic\")\n",
+        "\n",
+        "plt.tight_layout(pad=1.2)\n",
+        "plt.show()"
+      ],
+      "id": "2e1f3fc3",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "## Row {height=\"auto\"}\n",
+        "\n",
+        "### Referencias bibliográficas\n",
+        "\n",
+        "::: {style=\"background:#fff; border-radius:12px; border:1px solid #E2E8F0; padding:28px; box-shadow:0 2px 8px rgba(0,0,0,0.04); border-top:4px solid #1E293B;\"}\n",
+        "\n",
+        "#### Medidas de tendencia central y dispersión\n",
+        "\n",
+        "| # | Medida | Referencia |\n",
+        "|:---:|:---|:---|\n",
+        "| [1] | **Media aritmética** | Walpole, R. E., Myers, R. H., & Myers, S. L. (2012). *Probability & Statistics for Engineers and Scientists* (9.ª ed.). Pearson. Cap. 1, p. 15. |\n",
+        "| [2] | **Mediana** | Montgomery, D. C., & Runger, G. C. (2018). *Applied Statistics and Probability for Engineers* (7.ª ed.). Wiley. Cap. 6, p. 200. |\n",
+        "| [3] | **Moda** | Triola, M. F. (2018). *Elementary Statistics* (13.ª ed.). Pearson Education. Cap. 3, p. 86. |\n",
+        "| [4] | **Desviación estándar / Varianza** | Devore, J. L. (2015). *Probability and Statistics for Engineering and the Sciences* (9.ª ed.). Cengage. Cap. 4, p. 150. |\n",
+        "| [5] | **Cuartiles e IQR  (M.D.L.)** | Mendenhall, W., Beaver, R. J., & Beaver, B. M. (2013). *Introduction to Probability and Statistics* (14.ª ed.). Cengage. Cap. 2, p. 55. |\n",
+        "| [6] | **Asimetría y Curtosis  (M.D.F.)** | Spiegel, M. R., & Stephens, L. J. (2008). *Statistics* (4.ª ed.). McGraw-Hill Schaum's Outlines. Cap. 4, p. 90. |\n",
+        "| [7] | **Fuente de datos** | Instituto Colombiano para la Evaluación de la Educación — SaberPro. (2023). *Microdatos Saber 11*. Portal Data SaberPro. https://www.SaberPro.gov.co/data-SaberPro |\n",
+        "\n",
+        ":::\n"
+      ],
+      "id": "05774b63"
+    }
+  ],
+  "metadata": {
+    "kernelspec": {
+      "name": "python3",
+      "language": "python",
+      "display_name": "Python 3 (ipykernel)",
+      "path": "C:\\Users\\asus\\AppData\\Local\\Python\\pythoncore-3.14-64\\share\\jupyter\\kernels\\python3"
+    }
+  },
+  "nbformat": 4,
+  "nbformat_minor": 5
+}
