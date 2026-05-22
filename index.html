@@ -471,6 +471,189 @@
     transform: translateY(0);
   }
 
+  /* ─── AUTHORS SECTION ────────────────────────────── */
+  .authors-section {
+    background: var(--cream);
+    padding: 6rem 8vw;
+    position: relative;
+    overflow: hidden;
+  }
+  .authors-section::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, var(--teal), var(--blue), var(--orange));
+  }
+  .authors-section::after {
+    content: '05';
+    position: absolute;
+    right: 6vw;
+    top: 4rem;
+    font-family: 'Playfair Display', serif;
+    font-size: 9rem;
+    font-weight: 900;
+    color: rgba(26,60,94,.05);
+    line-height: 1;
+    pointer-events: none;
+    user-select: none;
+  }
+  .authors-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 1.4rem;
+    margin-top: 2.8rem;
+  }
+  .author-card {
+    background: #fff;
+    border: 1px solid #DDE6EF;
+    border-radius: 14px;
+    padding: 1.8rem 1.6rem;
+    position: relative;
+    overflow: hidden;
+    transition: transform .25s ease, box-shadow .25s ease;
+  }
+  .author-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 20px 48px rgba(13,31,51,.12);
+  }
+  .author-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+  }
+  .author-card:nth-child(1)::before { background: linear-gradient(90deg, var(--teal), var(--blue)); }
+  .author-card:nth-child(2)::before { background: linear-gradient(90deg, var(--orange), var(--gold)); }
+  .author-card:nth-child(3)::before { background: linear-gradient(90deg, #2D9E6C, #1F7A52); }
+  .author-card:nth-child(4)::before { background: linear-gradient(90deg, var(--blue), var(--teal)); }
+  .author-card:nth-child(5)::before { background: linear-gradient(90deg, var(--gold), var(--orange)); }
+  .author-initials {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Playfair Display', serif;
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 1rem;
+  }
+  .author-card:nth-child(1) .author-initials { background: linear-gradient(135deg, var(--teal), var(--blue)); }
+  .author-card:nth-child(2) .author-initials { background: linear-gradient(135deg, var(--orange), var(--gold)); }
+  .author-card:nth-child(3) .author-initials { background: linear-gradient(135deg, #2D9E6C, #1F7A52); }
+  .author-card:nth-child(4) .author-initials { background: linear-gradient(135deg, var(--blue), var(--teal)); }
+  .author-card:nth-child(5) .author-initials { background: linear-gradient(135deg, var(--gold), #C8862A); }
+  .author-name {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--blue);
+    line-height: 1.25;
+    margin-bottom: .35rem;
+  }
+  .author-role {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: .68rem;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--grey);
+  }
+  .authors-intro {
+    max-width: 660px;
+    font-size: 1rem;
+    line-height: 1.75;
+    color: #354A5E;
+  }
+
+  /* ─── RESPONSIVE ─────────────────────────────────── */
+  @media (max-width: 1024px) {
+    .hero { padding: 5rem 6vw 4rem; }
+    section { padding: 5rem 6vw; }
+    footer { padding: 2.5rem 6vw; }
+    .authors-section { padding: 5rem 6vw; }
+    .authors-section::after { display: none; }
+  }
+
+  @media (max-width: 768px) {
+    .hero {
+      padding: 4rem 5vw 3rem;
+      min-height: auto;
+      padding-bottom: 5rem;
+    }
+    .hero h1 { font-size: clamp(2rem, 8vw, 3rem); }
+    .hero-sub { font-size: .95rem; }
+    .hero-stats {
+      gap: 1.8rem;
+      flex-wrap: wrap;
+    }
+    .hero-stat .num { font-size: 1.9rem; }
+
+    nav {
+      padding: .75rem 4vw;
+      gap: 1.2rem;
+      -webkit-overflow-scrolling: touch;
+    }
+    nav a { font-size: .72rem; }
+
+    section { padding: 3.5rem 5vw; }
+    h2 { font-size: clamp(1.5rem, 6vw, 2.2rem); }
+    h3 { font-size: 1.1rem; }
+    p  { font-size: .93rem; }
+
+    .card-grid { grid-template-columns: 1fr; }
+    .two-col { grid-template-columns: 1fr; gap: 1.2rem; }
+
+    .conclusion-grid { grid-template-columns: 1fr; }
+    .conclusion-card { padding: 1.4rem; }
+
+    .chart-header { padding: 1rem 1.2rem; flex-wrap: wrap; }
+    .chart-body { padding: .8rem; }
+    .chart-caption { padding: .8rem 1rem; font-size: .78rem; }
+
+    .findings-table { font-size: .78rem; display: block; overflow-x: auto; white-space: nowrap; }
+    .findings-table th,
+    .findings-table td { padding: .65rem .9rem; }
+
+    footer {
+      flex-direction: column;
+      gap: 1.2rem;
+      padding: 2rem 5vw;
+      font-size: .8rem;
+    }
+
+    .method-strip { gap: .8rem; }
+    .method-pill { font-size: .68rem; padding: .4rem .9rem; }
+
+    .authors-section { padding: 3.5rem 5vw; }
+    .authors-grid { grid-template-columns: 1fr 1fr; gap: 1rem; }
+    .author-card { padding: 1.4rem 1.2rem; }
+    .author-initials { width: 40px; height: 40px; font-size: .95rem; }
+    .author-name { font-size: .95rem; }
+  }
+
+  @media (max-width: 480px) {
+    .hero { padding: 3.5rem 4vw 4.5rem; }
+    .hero-eyebrow { font-size: .65rem; }
+    .hero-stats { gap: 1.2rem; }
+    .hero-stat .num { font-size: 1.6rem; }
+    .hero-stat .lbl { font-size: .68rem; }
+
+    nav { padding: .6rem 3vw; gap: .9rem; }
+
+    section { padding: 2.8rem 4vw; }
+    .authors-section { padding: 2.8rem 4vw; }
+
+    .authors-grid { grid-template-columns: 1fr; }
+
+    .card { padding: 1.4rem; }
+    .card .card-num { font-size: 2rem; }
+
+    .section-label { font-size: .62rem; }
+  }
+
   /* ─── CALLOUT ─────────────────────────────────────── */
   .callout {
     background: linear-gradient(135deg, var(--blue) 0%, var(--teal) 100%);
@@ -541,6 +724,7 @@
   <a href="#trabajo">Trabajo estudiantil</a>
   <a href="#regresion">Regresión</a>
   <a href="#conclusiones">Conclusiones</a>
+  <a href="#autores">Autores</a>
 </nav>
 
 <!-- ════════════ METODOLOGÍA ════════════ -->
@@ -855,6 +1039,40 @@
   <div style="margin-top:3.5rem; padding:2.5rem; background:rgba(255,255,255,.04); border-radius:16px; border:1px solid rgba(255,255,255,.1); max-width:820px">
     <div class="section-label" style="color:var(--orange)">Recomendaciones de política pública</div>
     <p style="color:rgba(255,255,255,.8); margin-top:1rem">Los hallazgos sugieren que las intervenciones más efectivas deberían apuntar a: <strong style="color:var(--gold)">(1)</strong> elevar el nivel educativo de los hogares a través de programas de formación para padres en comunidades de estratos bajos; <strong style="color:var(--gold)">(2)</strong> implementar becas laborales o subsidios que permitan a los estudiantes de bajos recursos reducir su jornada laboral sin pérdida de ingresos; <strong style="color:var(--gold)">(3)</strong> fortalecer programas de inglés en universidades públicas del Caribe con metodologías intensivas y gratuitas; y <strong style="color:var(--gold)">(4)</strong> garantizar que el acceso a conectividad vaya acompañado de alfabetización digital y recursos pedagógicos de calidad.</p>
+  </div>
+</section>
+
+<!-- ════════════ AUTORES ════════════ -->
+<section id="autores" class="authors-section">
+  <div class="section-label">Equipo de investigación</div>
+  <h2>Autores</h2>
+  <p class="authors-intro">Este estudio fue desarrollado como proyecto académico de análisis estadístico en la <strong>Universidad Tecnológica de Bolívar</strong>, explorando las relaciones entre condiciones socioeconómicas y rendimiento en las Pruebas Saber Pro 2023 para la Región Caribe.</p>
+  <div class="authors-grid">
+    <div class="author-card fade-in">
+      <div class="author-initials">DJ</div>
+      <div class="author-name">Deiner de Jesús<br>González Paredes</div>
+      <div class="author-role">Análisis estadístico</div>
+    </div>
+    <div class="author-card fade-in">
+      <div class="author-initials">SJ</div>
+      <div class="author-name">Santiago José<br>Cuesta Maza</div>
+      <div class="author-role">Análisis estadístico</div>
+    </div>
+    <div class="author-card fade-in">
+      <div class="author-initials">LE</div>
+      <div class="author-name">Luis Eduardo<br>Mendoza Angulo</div>
+      <div class="author-role">Análisis estadístico</div>
+    </div>
+    <div class="author-card fade-in">
+      <div class="author-initials">DV</div>
+      <div class="author-name">Danna Valentina<br>Zuluaga Hernández</div>
+      <div class="author-role">Análisis estadístico</div>
+    </div>
+    <div class="author-card fade-in">
+      <div class="author-initials">VB</div>
+      <div class="author-name">Valeria Estefanía<br>Berrío Payares</div>
+      <div class="author-role">Análisis estadístico</div>
+    </div>
   </div>
 </section>
 
